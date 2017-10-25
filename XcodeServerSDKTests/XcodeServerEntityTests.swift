@@ -24,7 +24,7 @@ class XcodeServerEntityTests: XCTestCase {
         // let defaultEntity = XcodeServerEntity()
         
         // Unable to test assertions in Swift...
-        // XCTAssertNotNil(defaultEntity.dictionarify(), "Should return empty NSDictionary")
+        // XCTAssertNotNil(defaultEntity.dictionarify(), "Should return empty [String:Any]")
     }
     
 }

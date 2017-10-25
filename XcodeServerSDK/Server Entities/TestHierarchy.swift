@@ -66,44 +66,42 @@ public class TestHierarchy : XcodeServerEntity {
     which is the aggregated status, so that you don't have to iterate through all tests to figure it out yourself. 1 if all are 1, 0 otherwise.
     */
     
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
         
         //TODO: come up with useful things to parse
         //TODO: add search capabilities, aggregate generation etc
 
-        self.testData = TestHierarchy.pullData(json)
+		self.testData = TestHierarchy.pullData(json: json)
         
         try super.init(json: json)
     }
     
-    class func pullData(json: NSDictionary) -> TestData {
+    class func pullData(json: [String:Any]) -> TestData {
         
         var data = TestData()
         
         for (_targetName, _targetData) in json {
-            let targetName = _targetName as! String
-            let targetData = _targetData as! NSDictionary
-            data[targetName] = pullTarget(targetName, targetData: targetData)
+            let targetName = _targetName
+            let targetData = _targetData as! [String:Any]
+			data[targetName] = pullTarget(named: targetName, targetData: targetData)
         }
         
         return data
     }
     
-    class func pullTarget(targetName: String, targetData: NSDictionary) -> TestTarget {
-        
+    class func pullTarget(named targetName: String, targetData: [String:Any]) -> TestTarget {
         var target = TestTarget()
         
         for (_className, _classData) in targetData {
-            let className = _className as! String
-            let classData = _classData as! NSDictionary
-            target[className] = pullClass(className, classData: classData)
+            let className = _className
+            let classData = _classData as! [String:Any]
+			target[className] = pullClass(named: className, classData: classData)
         }
         
         return target
     }
     
-    class func pullClass(className: String, classData: NSDictionary) -> TestClass {
-        
+    class func pullClass(named className: String, classData: [String:Any]) -> TestClass {
         let classy: TestClass
         if className == TestResultAggregateKey {
             classy = TestClass.Aggregate(classData as! AggregateResult)
@@ -112,9 +110,9 @@ public class TestHierarchy : XcodeServerEntity {
             var newData = [String: TestMethod]()
             
             for (_methodName, _methodData) in classData {
-                let methodName = _methodName as! String
-                let methodData = _methodData as! NSDictionary
-                newData[methodName] = pullMethod(methodName, methodData: methodData)
+                let methodName = _methodName
+                let methodData = _methodData as! [String:Any]
+				newData[methodName] = pullMethod(named: methodName, methodData: methodData)
             }
             
             classy = TestClass.Class(newData)
@@ -122,7 +120,7 @@ public class TestHierarchy : XcodeServerEntity {
         return classy
     }
     
-    class func pullMethod(methodName: String, methodData: NSDictionary) -> TestMethod {
+    class func pullMethod(named methodName: String, methodData: [String:Any]) -> TestMethod {
         
         let method: TestMethod
         if methodName == TestResultAggregateKey {

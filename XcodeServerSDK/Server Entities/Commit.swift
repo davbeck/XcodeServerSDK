@@ -13,18 +13,18 @@ public class Commit: XcodeServerEntity {
     public let hash: String
     public let filePaths: [File]
     public let message: String?
-    public let date: NSDate
+    public let date: Date
     public let repositoryID: String
     public let contributor: Contributor
     
     // MARK: Initializers
-    public required init(json: NSDictionary) throws {
-        self.hash = try json.stringForKey("XCSCommitHash")
-        self.filePaths = try json.arrayForKey("XCSCommitCommitChangeFilePaths").map { try File(json: $0) }
-        self.message = json.optionalStringForKey("XCSCommitMessage")
-        self.date = try json.dateForKey("XCSCommitTimestamp")
-        self.repositoryID = try json.stringForKey("XCSBlueprintRepositoryID")
-        self.contributor = try Contributor(json: try json.dictionaryForKey("XCSCommitContributor"))
+    public required init(json: [String:Any]) throws {
+        self.hash = try json["XCSCommitHash"].unwrap(as: String.self)
+		self.filePaths = try json["XCSCommitCommitChangeFilePaths"].unwrap(as: [[String:Any]].self).map { try File(json: $0) }
+        self.message = json["XCSCommitMessage"] as? String
+		self.date = try Date.dateFromXCSString(json["XCSCommitTimestamp"].unwrap(as: String.self)).unwrap()
+        self.repositoryID = try json["XCSBlueprintRepositoryID"].unwrap(as: String.self)
+        self.contributor = try Contributor(json: json["XCSCommitContributor"].unwrap(as: [String:Any].self))
         
         try super.init(json: json)
     }

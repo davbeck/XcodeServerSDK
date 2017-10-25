@@ -111,30 +111,30 @@ public class BotConfiguration : XcodeServerEntity {
     public let deviceSpecification: DeviceSpecification
     public let sourceControlBlueprint: SourceControlBlueprint
     
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
         
-        self.builtFromClean = CleaningPolicy(rawValue: try json.intForKey("builtFromClean")) ?? .Never
-        self.codeCoveragePreference = CodeCoveragePreference(rawValue: json.optionalIntForKey("codeCoveragePreference") ?? 0) ?? .UseSchemeSetting
+        self.builtFromClean = CleaningPolicy(rawValue: try json["builtFromClean"].unwrap(as: Int.self)) ?? .Never
+        self.codeCoveragePreference = CodeCoveragePreference(rawValue: json["codeCoveragePreference"] as? Int ?? 0) ?? .UseSchemeSetting
         
-        if let buildConfigOverride = json.optionalStringForKey("buildConfiguration") {
+        if let buildConfigOverride = json["buildConfiguration"] as? String {
             self.buildConfiguration = BuildConfiguration.OverrideWithSpecific(buildConfigOverride)
         } else {
             self.buildConfiguration = .UseSchemeSetting
         }
-        self.analyze = try json.boolForKey("performsAnalyzeAction")
-        self.archive = try json.boolForKey("performsArchiveAction")
-        self.exportsProductFromArchive = json.optionalBoolForKey("exportsProductFromArchive") ?? false
-        self.test = try json.boolForKey("performsTestAction")
-        self.schemeName = try json.stringForKey("schemeName")
+        self.analyze = try json["performsAnalyzeAction"].unwrap(as: Bool.self)
+        self.archive = try json["performsArchiveAction"].unwrap(as: Bool.self)
+        self.exportsProductFromArchive = json["exportsProductFromArchive"] as? Bool ?? false
+        self.test = try json["performsTestAction"].unwrap(as: Bool.self)
+        self.schemeName = try json["schemeName"].unwrap(as: String.self)
         self.schedule = try BotSchedule(json: json)
-        self.triggers = try XcodeServerArray(try json.arrayForKey("triggers"))
-        self.sourceControlBlueprint = try SourceControlBlueprint(json: try json.dictionaryForKey("sourceControlBlueprint"))
+        self.triggers = try XcodeServerArray(try json["triggers"].unwrap(as: [[String:Any]].self))
+        self.sourceControlBlueprint = try SourceControlBlueprint(json: try json["sourceControlBlueprint"].unwrap(as: [String:Any].self))
         
         //old bots (xcode 6) only have testingDeviceIds, try to parse those into the new format of DeviceSpecification (xcode 7)
-        if let deviceSpecJSON = json.optionalDictionaryForKey("deviceSpecification") {
+        if let deviceSpecJSON = json["deviceSpecification"] as? [String:Any] {
             self.deviceSpecification = try DeviceSpecification(json: deviceSpecJSON)
         } else {
-            if let testingDeviceIds = json.optionalArrayForKey("testingDeviceIDs") as? [String] {
+            if let testingDeviceIds = json["testingDeviceIDs"] as? [String] {
                 self.deviceSpecification = DeviceSpecification(testingDeviceIDs: testingDeviceIds)
             } else {
                 self.deviceSpecification = DeviceSpecification(testingDeviceIDs: [])
@@ -174,9 +174,8 @@ public class BotConfiguration : XcodeServerEntity {
             super.init()
     }
     
-    public override func dictionarify() -> NSDictionary {
-        
-        let dictionary = NSMutableDictionary()
+    public override func dictionarify() -> [String:Any] {
+        var dictionary = [String:Any]()
         
         //blueprint
         dictionary["sourceControlBlueprint"] = self.sourceControlBlueprint.dictionarify()
@@ -198,8 +197,8 @@ public class BotConfiguration : XcodeServerEntity {
         }
         
         let botScheduleDict = self.schedule.dictionarify() //needs to be merged into the main bot config dict
-        dictionary.addEntriesFromDictionary(botScheduleDict as [NSObject : AnyObject])
-        
+		dictionary.merge(botScheduleDict, uniquingKeysWith: { a, b in a })
+		
         return dictionary
     }
 }

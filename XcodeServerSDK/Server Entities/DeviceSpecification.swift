@@ -33,12 +33,12 @@ public class DevicePlatform : XcodeServerEntity {
     public let type: PlatformType
     public let simulatorType: SimulatorType?
     
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
         
-        self.displayName = try json.stringForKey("displayName")
-        self.version = try json.stringForKey("version")
-        self.type = PlatformType(rawValue: json.optionalStringForKey("identifier") ?? "") ?? .Unknown
-        self.simulatorType = SimulatorType(rawValue: json.optionalStringForKey("simulatorIdentifier") ?? "")
+        self.displayName = try json["displayName"].unwrap(as: String.self)
+        self.version = try json["version"].unwrap(as: String.self)
+        self.type = PlatformType(rawValue: json["identifier"] as? String ?? "") ?? .Unknown
+        self.simulatorType = SimulatorType(rawValue: json["simulatorIdentifier"] as? String ?? "")
         
         try super.init(json: json)
     }
@@ -69,19 +69,21 @@ public class DevicePlatform : XcodeServerEntity {
         return DevicePlatform(type: DevicePlatform.PlatformType.tvOS)
     }
     
-    public override func dictionarify() -> NSDictionary {
+    public override func dictionarify() -> [String:Any] {
         
         //in this case we want everything the way we parsed it.
         if let original = self.originalJSON {
             return original
         }
         
-        let dictionary = NSMutableDictionary()
+		var dictionary = [String:Any]()
         
         dictionary["displayName"] = self.displayName
         dictionary["version"] = self.version
         dictionary["identifier"] = self.type.rawValue
-        dictionary.optionallyAddValueForKey(self.simulatorType?.rawValue, key: "simulatorIdentifier")
+		if let simulatorType = self.simulatorType?.rawValue {
+			dictionary["simulatorIdentifier"] = simulatorType
+		}
         
         return dictionary
     }
@@ -150,11 +152,11 @@ public class DeviceFilter : XcodeServerEntity {
     
     public let architectureType: ArchitectureType //TODO: ditto, find out more.
     
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
         
-        self.platform = try DevicePlatform(json: try json.dictionaryForKey("platform"))
-        self.filterType = FilterType(rawValue: try json.intForKey("filterType")) ?? .AllAvailableDevicesAndSimulators
-        self.architectureType = ArchitectureType(rawValue: json.optionalIntForKey("architectureType") ?? -1) ?? .Unknown
+        self.platform = try DevicePlatform(json: try json["platform"].unwrap(as: [String:Any].self))
+        self.filterType = FilterType(rawValue: try json["filterType"].unwrap(as: Int.self)) ?? .AllAvailableDevicesAndSimulators
+        self.architectureType = ArchitectureType(rawValue: json["architectureType"] as? Int ?? -1) ?? .Unknown
         
         try super.init(json: json)
     }
@@ -167,7 +169,7 @@ public class DeviceFilter : XcodeServerEntity {
         super.init()
     }
     
-    public override func dictionarify() -> NSDictionary {
+    public override func dictionarify() -> [String:Any] {
         
         return [
             "filterType": self.filterType.rawValue,
@@ -182,10 +184,10 @@ public class DeviceSpecification : XcodeServerEntity {
     public let deviceIdentifiers: [String]
     public let filters: [DeviceFilter]
     
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
         
-        self.deviceIdentifiers = try json.arrayForKey("deviceIdentifiers")
-        self.filters = try XcodeServerArray(try json.arrayForKey("filters"))
+        self.deviceIdentifiers = try json["deviceIdentifiers"].unwrap(as: [String].self)
+        self.filters = try XcodeServerArray(try json["filters"].unwrap(as: [[String:Any]].self))
         
         try super.init(json: json)
     }
@@ -209,7 +211,7 @@ public class DeviceSpecification : XcodeServerEntity {
         super.init()
     }
     
-    public override func dictionarify() -> NSDictionary {
+    public override func dictionarify() -> [String:Any] {
         
         return [
             "deviceIdentifiers": self.deviceIdentifiers,

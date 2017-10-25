@@ -10,7 +10,7 @@ import Foundation
 import BuildaUtils
 
 /// Posible errors thrown by `XcodeServerConfig`
-public enum ConfigurationErrors : ErrorType {
+public enum ConfigurationErrors : Error {
     /// Thrown when no host was provided
     case NoHostProvided
     /// Thrown when an invalid host is provided (host is returned)
@@ -40,11 +40,13 @@ public struct XcodeServerConfig : JSONSerializable {
     //if set to false, fails if server certificate is not trusted yet
     public let automaticallyTrustSelfSignedCertificates: Bool = true
     
-    public func jsonify() -> NSDictionary {
-        let dict = NSMutableDictionary()
+    public func jsonify() -> [String:Any] {
+		var dict = [String:Any]()
         dict[Keys.Id] = self.id
         dict[Keys.Host] = self.host
-        dict.optionallyAddValueForKey(self.user, key: Keys.User)
+		if let user = self.user {
+			dict[Keys.User] = user
+		}
         return dict
     }
     
@@ -80,18 +82,18 @@ public struct XcodeServerConfig : JSONSerializable {
             throw ConfigurationErrors.NoHostProvided
         }
         
-        guard let url = NSURL(string: host) else {
+        guard let url = URL(string: host) else {
             throw ConfigurationErrors.InvalidHostProvided(host)
         }
         
-        guard url.scheme.isEmpty || url.scheme == "https" else {
+		guard url.scheme?.isEmpty ?? true || url.scheme == "https" else {
             let errMsg = "Xcode Server generally uses https, please double check your hostname"
             Log.error(errMsg)
             throw ConfigurationErrors.InvalidSchemeProvided(errMsg)
         }
         
         // validate if host is a valid URL
-        if url.scheme.isEmpty {
+        if url.scheme?.isEmpty ?? true {
             // exted host with https scheme
             host = "https://" + host
         }
@@ -104,7 +106,7 @@ public struct XcodeServerConfig : JSONSerializable {
     
     /**
     Initializes a server configuration with the provided `json`.
-    - parameter json: `NSDictionary` containing the `XcodeServerConfig` «configuration».
+    - parameter json: `[String:Any]` containing the `XcodeServerConfig` «configuration».
     
     - returns: A fully initialized `XcodeServerConfig` instance.
     
@@ -113,15 +115,15 @@ public struct XcodeServerConfig : JSONSerializable {
         - `InvalidHostProvided`: When the host provided doesn't produce a valid `URL`
         - `InvalidSchemeProvided`: When the provided scheme is not `HTTPS`
     */
-    public init(json: NSDictionary) throws {
+	public init(json: [String : Any]) throws {
         
-        guard let host = json.optionalStringForKey(Keys.Host) else {
+        guard let host = json[Keys.Host] as? String else {
             throw ConfigurationErrors.NoHostProvided
         }
 
-        let user = json.optionalStringForKey(Keys.User)
-        let password = json.optionalStringForKey(Keys.Password)
-        let id = json.optionalStringForKey(Keys.Id)
+        let user = json[Keys.User] as? String
+        let password = json[Keys.Password] as? String
+        let id = json[Keys.Id] as? String
         try self.init(host: host, user: user, password: password, id: id)
     }
 }

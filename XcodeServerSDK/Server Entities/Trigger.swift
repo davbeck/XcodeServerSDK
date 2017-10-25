@@ -85,43 +85,43 @@ public struct TriggerConfig: XcodeRead, XcodeWrite {
             }
     }
     
-    public init(json: NSDictionary) throws {
+    public init(json: [String:Any]) throws {
         
-        let phase = Phase(rawValue: try json.intForKey("phase"))!
+        let phase = Phase(rawValue: try json["phase"].unwrap(as: Int.self))!
         self.phase = phase
-        if let conditionsJSON = json.optionalDictionaryForKey("conditions") where phase == .Postbuild {
+		if let conditionsJSON = json["conditions"] as? [String:Any], phase == .Postbuild {
             //also parse conditions
             self.conditions = try TriggerConditions(json: conditionsJSON)
         } else {
             self.conditions = nil
         }
         
-        let kind = Kind(rawValue: try json.intForKey("type"))!
+        let kind = Kind(rawValue: try json["type"].unwrap(as: Int.self))!
         self.kind = kind
-        if let configurationJSON = json.optionalDictionaryForKey("emailConfiguration") where kind == .EmailNotification {
+		if let configurationJSON = json["emailConfiguration"] as? [String:Any], kind == .EmailNotification {
             //also parse email config
             self.emailConfiguration = try EmailConfiguration(json: configurationJSON)
         } else {
             self.emailConfiguration = nil
         }
         
-        self.name = try json.stringForKey("name")
-        self.scriptBody = try json.stringForKey("scriptBody")
+        self.name = try json["name"].unwrap(as: String.self)
+        self.scriptBody = try json["scriptBody"].unwrap(as: String.self)
         
-        self.id = json.optionalStringForKey("id") ?? Ref.new()
+        self.id = json["id"] as? String ?? Ref.new()
     }
     
-    public func dictionarify() -> NSDictionary {
+    public func dictionarify() -> [String:Any] {
         
-        let dict = NSMutableDictionary()
+        var dict = [String:Any]()
         
         dict["id"] = self.id
         dict["phase"] = self.phase.rawValue
         dict["type"] = self.kind.rawValue
         dict["scriptBody"] = self.scriptBody
         dict["name"] = self.name
-        dict.optionallyAddValueForKey(self.conditions?.dictionarify(), key: "conditions")
-        dict.optionallyAddValueForKey(self.emailConfiguration?.dictionarify(), key: "emailConfiguration")
+		dict["conditions"] = self.conditions?.dictionarify()
+		dict["emailConfiguration"] = self.emailConfiguration?.dictionarify()
         
         return dict
     }
@@ -136,13 +136,13 @@ public class Trigger : XcodeServerEntity {
         super.init()
     }
     
-    required public init(json: NSDictionary) throws {
+    required public init(json: [String:Any]) throws {
         
         self.config = try TriggerConfig(json: json)
         try super.init(json: json)
     }
     
-    public override func dictionarify() -> NSDictionary {
+    public override func dictionarify() -> [String:Any] {
         let dict = self.config.dictionarify()
         return dict
     }

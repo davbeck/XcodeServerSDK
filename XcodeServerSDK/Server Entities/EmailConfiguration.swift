@@ -25,10 +25,9 @@ public class EmailConfiguration : XcodeServerEntity {
         super.init()
     }
     
-    public override func dictionarify() -> NSDictionary {
-        
-        let dict = NSMutableDictionary()
-        
+    public override func dictionarify() -> [String:Any] {
+		var dict = [String:Any]()
+
         dict["emailCommitters"] = self.emailCommitters
         dict["includeCommitMessages"] = self.includeCommitMessages
         dict["includeIssueDetails"] = self.includeIssueDetails
@@ -37,12 +36,12 @@ public class EmailConfiguration : XcodeServerEntity {
         return dict
     }
     
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
         
-        self.emailCommitters = try json.boolForKey("emailCommitters")
-        self.includeCommitMessages = try json.boolForKey("includeCommitMessages")
-        self.includeIssueDetails = try json.boolForKey("includeIssueDetails")
-        self.additionalRecipients = try json.arrayForKey("additionalRecipients")
+        self.emailCommitters = try json["emailCommitters"].unwrap(as: Bool.self)
+        self.includeCommitMessages = try json["includeCommitMessages"].unwrap(as: Bool.self)
+        self.includeIssueDetails = try json["includeIssueDetails"].unwrap(as: Bool.self)
+        self.additionalRecipients = try json["additionalRecipients"].unwrap(as: [String].self)
         
         try super.init(json: json)
     }

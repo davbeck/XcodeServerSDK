@@ -40,10 +40,10 @@ public struct SocketIOPacket {
     private let dataString: String
     public let type: PacketType
     public let stringPayload: String
-    public var jsonPayload: NSDictionary? {
-        guard let data = self.stringPayload.dataUsingEncoding(NSUTF8StringEncoding) else { return nil }
-        let obj = try? NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions())
-        let dict = obj as? NSDictionary
+    public var jsonPayload: [String:Any]? {
+		guard let data = self.stringPayload.data(using: String.Encoding.utf8) else { return nil }
+		let obj = try? JSONSerialization.jsonObject(with: data)
+        let dict = obj as? [String:Any]
         return dict
     }
     
@@ -53,7 +53,7 @@ public struct SocketIOPacket {
         (self.type, self.stringPayload) = comps
     }
     
-    private static func countInitialColons(data: String) -> Int {
+    private static func countInitialColons(_ data: String) -> Int {
         var initialColonsCount = 0
         for i in data.characters {
             if i == ":" {
@@ -67,14 +67,14 @@ public struct SocketIOPacket {
         return initialColonsCount
     }
     
-    private static func parseComps(data: String) -> (type: PacketType, stringPayload: String)? {
+    private static func parseComps(_ data: String) -> (type: PacketType, stringPayload: String)? {
         
         //find the initial sequence of colons and count them, to know how to split the packet
         let initialColonsCount = self.countInitialColons(data)
-        let splitter = String(count: initialColonsCount, repeatedValue: Character(":"))
+        let splitter = String(repeating: ":", count: initialColonsCount)
         
         let comps = data
-            .componentsSeparatedByString(splitter)
+            .components(separatedBy: splitter)
             .filter { $0.characters.count > 0 }
         guard comps.count > 0 else { return nil }
         guard
@@ -88,7 +88,7 @@ public struct SocketIOPacket {
     
     //e.g. "7:::1+0"
     public func parseError() -> (reason: ErrorReason?, advice: ErrorAdvice?) {
-        let comps = self.stringPayload.componentsSeparatedByString("+")
+        let comps = self.stringPayload.components(separatedBy: "+")
         let reasonString = comps.first ?? ""
         let reasonInt = Int(reasonString) ?? -1
         let adviceString = comps.count == 2 ? comps.last! : ""
@@ -101,9 +101,9 @@ public struct SocketIOPacket {
 
 public class SocketIOHelper {
     
-    public static func parsePackets(message: String) -> [SocketIOPacket] {
+    public static func parsePackets(_ message: String) -> [SocketIOPacket] {
         
-        let packetStrings = self.parsePacketStrings(message)
+		let packetStrings = self.parsePacketStrings(message: message)
         let packets = packetStrings.map { SocketIOPacket(data: $0) }.filter { $0 != nil }.map { $0! }
         return packets
     }
@@ -117,9 +117,9 @@ public class SocketIOHelper {
         guard message.hasPrefix(splitChar) else { return [message] }
         
         let comps = message
-            .substringFromIndex(message.startIndex.advancedBy(1))
-            .componentsSeparatedByString(splitChar)
-            .filter { $0.componentsSeparatedByString(":::").count > 1 }
+			.dropFirst()
+            .components(separatedBy: splitChar)
+            .filter { $0.components(separatedBy: ":::").count > 1 }
         return comps
     }
 }

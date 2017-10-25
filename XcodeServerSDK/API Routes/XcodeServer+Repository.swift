@@ -18,23 +18,21 @@ extension XcodeServer {
     - parameter repositories: Optional array of repositories.
     - parameter error:        Optional error
     */
-    public final func getRepositories(completion: (repositories: [Repository]?, error: NSError?) -> ()) {
+    public final func getRepositories(completion: @escaping (_ repositories: [Repository]?, _ error: Error?) -> ()) {
         
-        self.sendRequestWithMethod(.GET, endpoint: .Repositories, params: nil, query: nil, body: nil) { (response, body, error) -> () in
-            guard error == nil else {
-                completion(repositories: nil, error: error)
-                return
-            }
-            
-            guard let repositoriesBody = (body as? NSDictionary)?["results"] as? NSArray else {
-                completion(repositories: nil, error: Error.withInfo("Wrong body \(body)"))
-                return
-            }
-            
-            let (result, error): ([Repository]?, NSError?) = unthrow {
-                return try XcodeServerArray(repositoriesBody)
-            }
-            completion(repositories: result, error: error)
+        self.sendRequest(with: .get, endpoint: .Repositories, params: nil, query: nil, body: nil) { (response, body, error) -> () in
+			do {
+				if let error = error {
+					throw error
+				}
+				guard let repositoriesBody = (body as? [String:Any])?["results"] as? [[String:Any]] else {
+					throw MyError.withInfo("Wrong body \(String(describing: body))")
+				}
+				
+				completion(try XcodeServerArray(repositoriesBody), nil)
+			} catch {
+				completion(nil, error)
+			}
         }
     }
     
@@ -53,7 +51,7 @@ extension XcodeServer {
         case NilResponse
         case CorruptedJSON
         case WrongStatusCode(Int)
-        case Error(ErrorType)
+        case Error(Error)
         case Success(Repository)
     }
     
@@ -64,42 +62,38 @@ extension XcodeServer {
     - parameter repository: Optional object of created repository.
     - parameter error:      Optional error.
     */
-    public final func createRepository(repository: Repository, completion: (response: CreateRepositoryResponse) -> ()) {
+    public final func createRepository(repository: Repository, completion: @escaping (_ response: CreateRepositoryResponse) -> ()) {
         let body = repository.dictionarify()
         
-        self.sendRequestWithMethod(.POST, endpoint: .Repositories, params: nil, query: nil, body: body) { (response, body, error) -> () in
-            if let error = error {
-                completion(response: XcodeServer.CreateRepositoryResponse.Error(error))
-                return
-            }
-            
-            guard let response = response else {
-                completion(response: XcodeServer.CreateRepositoryResponse.NilResponse)
-                return
-            }
-            
-            guard let repositoryBody = body as? NSDictionary where response.statusCode == 204 else {
-                switch response.statusCode {
-                case 200:
-                    completion(response: XcodeServer.CreateRepositoryResponse.CorruptedJSON)
-                case 409:
-                    completion(response: XcodeServer.CreateRepositoryResponse.RepositoryAlreadyExists)
-                default:
-                    completion(response: XcodeServer.CreateRepositoryResponse.WrongStatusCode(response.statusCode))
-                }
-                
-                return
-            }
-            
-            let (result, error): (Repository?, NSError?) = unthrow {
-                return try Repository(json: repositoryBody)
-            }
-            if let error = error {
-                completion(response: .Error(error))
-            } else {
-                completion(response: .Success(result!))
-            }
+        self.sendRequest(with: .post, endpoint: .Repositories, params: nil, query: nil, body: body) { (response, body, error) -> () in
+			do {
+				if let error = error {
+					completion(XcodeServer.CreateRepositoryResponse.Error(error))
+					return
+				}
+				guard let response = response as? HTTPURLResponse else {
+					completion(XcodeServer.CreateRepositoryResponse.NilResponse)
+					return
+				}
+				
+				guard let repositoryBody = body as? [String:Any], response.statusCode == 204 else {
+					switch response.statusCode {
+					case 200:
+						completion(XcodeServer.CreateRepositoryResponse.CorruptedJSON)
+					case 409:
+						completion(XcodeServer.CreateRepositoryResponse.RepositoryAlreadyExists)
+					default:
+						completion(XcodeServer.CreateRepositoryResponse.WrongStatusCode(response.statusCode))
+					}
+					
+					return
+				}
+				
+				let result = try Repository(json: repositoryBody)
+				completion(.Success(result))
+			} catch {
+				completion(.Error(error))
+			}
         }
     }
-    
 }

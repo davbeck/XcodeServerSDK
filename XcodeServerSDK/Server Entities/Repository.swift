@@ -122,14 +122,14 @@ public class Repository: XcodeServerEntity {
     
     - returns: Initialized repository struct.
     */
-    public required init(json: NSDictionary) throws {
-        self.name = try json.stringForKey("name")
+    public required init(json: [String:Any]) throws {
+        self.name = try json["name"].unwrap(as: String.self)
         
-        self.httpAccess = HTTPAccessType(rawValue: try json.intForKey("httpAccessType"))!
-        self.sshAccess = SSHAccessType(rawValue: try json.intForKey("posixPermissions"))!
+        self.httpAccess = HTTPAccessType(rawValue: try json["httpAccessType"].unwrap(as: Int.self))!
+        self.sshAccess = SSHAccessType(rawValue: try json["posixPermissions"].unwrap(as: Int.self))!
         
-        self.writeAccessExternalIds = try json.arrayForKey("writeAccessExternalIDs")
-        self.readAccessExternalIds = try json.arrayForKey("readAccessExternalIDs")
+        self.writeAccessExternalIds = try json["writeAccessExternalIDs"].unwrap(as: [String].self)
+        self.readAccessExternalIds = try json["readAccessExternalIDs"].unwrap(as: [String].self)
         
         try super.init(json: json)
     }
@@ -139,8 +139,8 @@ public class Repository: XcodeServerEntity {
     
     - returns: Dictionary representing JSON value of Repository object.
     */
-    public override func dictionarify() -> NSMutableDictionary {
-        let dict = NSMutableDictionary()
+    public override func dictionarify() -> [String:Any] {
+        var dict = [String:Any]()
         
         dict["name"] = self.name
         dict["httpAccessType"] = self.httpAccess.rawValue

@@ -32,40 +32,40 @@ public class Device : XcodeServerEntity {
     public let isServer: Bool
     public let retina: Bool
     
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
         
-        self.connected = try json.boolForKey("connected")
-        self.osVersion = try json.stringForKey("osVersion")
-        self.simulator = try json.boolForKey("simulator")
-        self.modelCode = json.optionalStringForKey("modelCode")
-        self.deviceType = json.optionalStringForKey("deviceType")
-        self.modelName = json.optionalStringForKey("modelName")
-        self.deviceECID = json.optionalStringForKey("deviceECID")
-        self.modelUTI = json.optionalStringForKey("modelUTI")
-        if let proxyDevice = json.optionalDictionaryForKey("activeProxiedDevice") {
+        self.connected = try json["connected"].unwrap(as: Bool.self)
+        self.osVersion = try json["osVersion"].unwrap(as: String.self)
+        self.simulator = try json["simulator"].unwrap(as: Bool.self)
+        self.modelCode = json["modelCode"] as? String
+        self.deviceType = json["deviceType"] as? String
+        self.modelName = json["modelName"] as? String
+        self.deviceECID = json["deviceECID"] as? String
+        self.modelUTI = json["modelUTI"] as? String
+        if let proxyDevice = json["activeProxiedDevice"] as? [String:Any] {
             self.activeProxiedDevice = try Device(json: proxyDevice)
         } else {
             self.activeProxiedDevice = nil
         }
-        self.trusted = json.optionalBoolForKey("trusted") ?? false
-        self.name = try json.stringForKey("name")
-        self.supported = try json.boolForKey("supported")
-        self.processor = json.optionalStringForKey("processor")
-        self.identifier = try json.stringForKey("identifier")
-        self.enabledForDevelopment = try json.boolForKey("enabledForDevelopment")
-        self.serialNumber = json.optionalStringForKey("serialNumber")
-        self.platform = DevicePlatform.PlatformType(rawValue: try json.stringForKey("platformIdentifier")) ?? .Unknown
-        self.architecture = try json.stringForKey("architecture")
+        self.trusted = json["trusted"] as? Bool ?? false
+        self.name = try json["name"].unwrap(as: String.self)
+        self.supported = try json["supported"].unwrap(as: Bool.self)
+        self.processor = json["processor"] as? String
+        self.identifier = try json["identifier"].unwrap(as: String.self)
+        self.enabledForDevelopment = try json["enabledForDevelopment"].unwrap(as: Bool.self)
+        self.serialNumber = json["serialNumber"] as? String
+        self.platform = DevicePlatform.PlatformType(rawValue: try json["platformIdentifier"].unwrap(as: String.self)) ?? .Unknown
+        self.architecture = try json["architecture"].unwrap(as: String.self)
         
         //for some reason which is not yet clear to me (probably old/new XcS versions), sometimes
         //the key is "server" and sometimes "isServer". this just picks up the present one.
-        self.isServer = json.optionalBoolForKey("server") ?? json.optionalBoolForKey("isServer") ?? false
-        self.retina = try json.boolForKey("retina")
+        self.isServer = json["server"] as? Bool ?? json["isServer"] as? Bool ?? false
+        self.retina = try json["retina"].unwrap(as: Bool.self)
         
         try super.init(json: json)
     }
     
-    public override func dictionarify() -> NSDictionary {
+    public override func dictionarify() -> [String:Any] {
         
         return [
             "device_id": self.id

@@ -9,11 +9,11 @@
 import Foundation
 
 public protocol XcodeRead {
-    init(json: NSDictionary) throws
+    init(json: [String:Any]) throws
 }
 
 public protocol XcodeWrite {
-    func dictionarify() -> NSDictionary
+    func dictionarify() -> [String:Any]
 }
 
 public class XcodeServerEntity : XcodeRead, XcodeWrite {
@@ -24,16 +24,16 @@ public class XcodeServerEntity : XcodeRead, XcodeWrite {
     public let docType: String!
     
     //when created from json, let's save the original data here.
-    public let originalJSON: NSDictionary?
+	public let originalJSON: [String:Any]?
     
     //initializer which takes a dictionary and fills in values for recognized keys
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
         
-        self.id = json.optionalStringForKey("_id")
-        self.rev = json.optionalStringForKey("_rev")
-        self.tinyID = json.optionalStringForKey("tinyID")
-        self.docType = json.optionalStringForKey("doc_type")
-        self.originalJSON = json.copy() as? NSDictionary
+        self.id = json["_id"] as? String
+        self.rev = json["_rev"] as? String
+        self.tinyID = json["tinyID"] as? String
+        self.docType = json["doc_type"] as? String
+        self.originalJSON = json
     }
     
     public init() {
@@ -44,12 +44,12 @@ public class XcodeServerEntity : XcodeRead, XcodeWrite {
         self.originalJSON = nil
     }
     
-    public func dictionarify() -> NSDictionary {
+    public func dictionarify() -> [String:Any] {
         assertionFailure("Must be overriden by subclasses that wish to dictionarify their data")
-        return NSDictionary()
+        return [String:Any]()
     }
     
-    public class func optional<T: XcodeRead>(json: NSDictionary?) throws -> T? {
+    public class func optional<T: XcodeRead>(json: [String:Any]?) throws -> T? {
         if let json = json {
             return try T(json: json)
         }
@@ -58,10 +58,8 @@ public class XcodeServerEntity : XcodeRead, XcodeWrite {
 }
 
 //parse an array of dictionaries into an array of parsed entities
-public func XcodeServerArray<T where T:XcodeRead>(jsonArray: NSArray) throws -> [T] {
-    
-    let array = jsonArray as! [NSDictionary]
-    let parsed = try array.map { (json: NSDictionary) -> (T) in
+public func XcodeServerArray<T>(_ array: [[String:Any]]) throws -> [T] where T:XcodeRead {
+    let parsed = try array.map { (_ json: [String:Any]) -> (T) in
         return try T(json: json)
     }
     return parsed

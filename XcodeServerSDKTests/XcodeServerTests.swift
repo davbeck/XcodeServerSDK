@@ -51,7 +51,7 @@ class XcodeServerTests: XCTestCase {
     func DEV_testLiveUpdates() {
         
         let exp = self.expectationWithDescription("Network")
-        let stopHandler = self.server.startListeningForLiveUpdates({ (messages: [LiveUpdateMessage]) -> () in
+        let stopHandler = self.server.startListeningForLiveUpdates({ (_ messages: [LiveUpdateMessage]) -> () in
             print(messages)
         })
         

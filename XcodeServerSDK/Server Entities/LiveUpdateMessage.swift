@@ -51,13 +51,13 @@ public class LiveUpdateMessage: XcodeServerEntity {
     public let result: Integration.Result?
     public let currentStep: Integration.Step?
     
-    required public init(json: NSDictionary) throws {
+    required public init(json: [String:Any]) throws {
         
-        let typeString = json.optionalStringForKey("name") ?? ""
+        let typeString = json["name"] as? String ?? ""
         
         self.type = MessageType(rawValue: typeString) ?? .Unknown
         
-        let args = (json["args"] as? NSArray)?[0] as? NSDictionary
+        let args = (json["args"] as? NSArray)?[0] as? [String:Any]
         
         self.message = args?["message"] as? String
         self.progress = args?["percentage"] as? Double
@@ -101,7 +101,7 @@ extension LiveUpdateMessage: CustomStringConvertible {
             .filter { $0.characters.count > 0 }
             .map { "\"\($0)\"" }
         
-        let str = nonNilComps.joinWithSeparator(", ")
+		let str = nonNilComps.joined(separator: ", ")
         return "LiveUpdateMessage \"\(self.type)\", \(str)"
     }
 }

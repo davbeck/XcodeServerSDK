@@ -14,11 +14,11 @@ public class Bot : XcodeServerEntity {
     public let configuration: BotConfiguration
     public let integrationsCount: Int
 
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
         
-        self.name = try json.stringForKey("name")
-        self.configuration = try BotConfiguration(json: try json.dictionaryForKey("configuration"))
-        self.integrationsCount = json.optionalIntForKey("integration_counter") ?? 0
+        self.name = try json["name"].unwrap(as: String.self)
+        self.configuration = try BotConfiguration(json: try json["configuration"].unwrap(as: [String:Any].self))
+        self.integrationsCount = json["integration_counter"] as? Int ?? 0
         
         try super.init(json: json)
     }
@@ -35,10 +35,9 @@ public class Bot : XcodeServerEntity {
         super.init()
     }
 
-    public override func dictionarify() -> NSDictionary {
-        
-        let dictionary = NSMutableDictionary()
-        
+    public override func dictionarify() -> [String:Any] {
+		var dictionary = [String:Any]()
+
         //name
         dictionary["name"] = self.name
         
@@ -49,7 +48,7 @@ public class Bot : XcodeServerEntity {
         dictionary["type"] = 1 //magic more
         dictionary["requiresUpgrade"] = false
         dictionary["group"] = [
-            "name": NSUUID().UUIDString
+            "name": UUID().uuidString
         ]
         
         return dictionary

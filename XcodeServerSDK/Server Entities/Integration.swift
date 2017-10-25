@@ -11,25 +11,25 @@ import Foundation
 public class Integration : XcodeServerEntity {
     
     //usually available during the whole integration's lifecycle
-    public let queuedDate: NSDate
+    public let queuedDate: Date
     public let shouldClean: Bool
     public let currentStep: Step!
     public let number: Int
     
     //usually available only after the integration has finished
     public let successStreak: Int?
-    public let startedDate: NSDate?
-    public let endedTime: NSDate?
-    public let duration: NSTimeInterval?
+    public let startedDate: Date?
+    public let endedTime: Date?
+    public let duration: TimeInterval?
     public let result: Result?
     public let buildResultSummary: BuildResultSummary?
     public let testedDevices: [Device]?
     public let testHierarchy: TestHierarchy?
-    public let assets: NSDictionary?  //TODO: add typed array with parsing
+    public let assets: [String:Any]?  //TODO: add typed array with parsing
     public let blueprint: SourceControlBlueprint?
     
     //new keys
-    public let expectedCompletionDate: NSDate?
+    public let expectedCompletionDate: Date?
     
     public enum Step : String {
         case Unknown = ""
@@ -63,45 +63,44 @@ public class Integration : XcodeServerEntity {
         case TriggerError = "trigger-error"
     }
     
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
+        self.queuedDate = try Date.dateFromXCSString(json["queuedDate"].unwrap(as: String.self)).unwrap()
+        self.startedDate = (json["startedTime"] as? String).flatMap(Date.dateFromXCSString)
+        self.endedTime = (json["endedTime"] as? String).flatMap(Date.dateFromXCSString)
+        self.duration = json["duration"] as? Double
+        self.shouldClean = try json["shouldClean"].unwrap(as: Bool.self)
+        self.currentStep = Step(rawValue: try json["currentStep"].unwrap(as: String.self)) ?? .Unknown
+        self.number = try json["number"].unwrap(as: Int.self)
+        self.successStreak = try json["success_streak"].unwrap(as: Int.self)
+        self.expectedCompletionDate = (json["expectedCompletionDate"] as? String).flatMap(Date.dateFromXCSString)
         
-        self.queuedDate = try json.dateForKey("queuedDate")
-        self.startedDate = json.optionalDateForKey("startedTime")
-        self.endedTime = json.optionalDateForKey("endedTime")
-        self.duration = json.optionalDoubleForKey("duration")
-        self.shouldClean = try json.boolForKey("shouldClean")
-        self.currentStep = Step(rawValue: try json.stringForKey("currentStep")) ?? .Unknown
-        self.number = try json.intForKey("number")
-        self.successStreak = try json.intForKey("success_streak")
-        self.expectedCompletionDate = json.optionalDateForKey("expectedCompletionDate")
-        
-        if let raw = json.optionalStringForKey("result") {
+        if let raw = json["result"] as? String {
             self.result = Result(rawValue: raw)
         } else {
             self.result = nil
         }
         
-        if let raw = json.optionalDictionaryForKey("buildResultSummary") {
+        if let raw = json["buildResultSummary"] as? [String:Any] {
             self.buildResultSummary = try BuildResultSummary(json: raw)
         } else {
             self.buildResultSummary = nil
         }
         
-        if let testedDevices = json.optionalArrayForKey("testedDevices") {
+        if let testedDevices = json["testedDevices"] as? [[String:Any]] {
             self.testedDevices = try XcodeServerArray(testedDevices)
         } else {
             self.testedDevices = nil
         }
         
-        if let testHierarchy = json.optionalDictionaryForKey("testHierarchy") where testHierarchy.count > 0 {
+        if let testHierarchy = json["testHierarchy"] as? [String:Any], testHierarchy.count > 0 {
             self.testHierarchy = try TestHierarchy(json: testHierarchy)
         } else {
             self.testHierarchy = nil
         }
 
-        self.assets = json.optionalDictionaryForKey("assets")
+        self.assets = json["assets"] as? [String:Any]
         
-        if let blueprint = json.optionalDictionaryForKey("revisionBlueprint") {
+        if let blueprint = json["revisionBlueprint"] as? [String:Any] {
             self.blueprint = try SourceControlBlueprint(json: blueprint)
         } else {
             self.blueprint = nil
@@ -128,22 +127,22 @@ public class BuildResultSummary : XcodeServerEntity {
     public let codeCoveragePercentage: Int
     public let codeCoveragePercentageDelta: Int
     
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
         
-        self.analyzerWarningCount = try json.intForKey("analyzerWarningCount")
-        self.testFailureCount = try json.intForKey("testFailureCount")
-        self.testsChange = try json.intForKey("testsChange")
-        self.errorCount = try json.intForKey("errorCount")
-        self.testsCount = try json.intForKey("testsCount")
-        self.testFailureChange = try json.intForKey("testFailureChange")
-        self.warningChange = try json.intForKey("warningChange")
-        self.regressedPerfTestCount = try json.intForKey("regressedPerfTestCount")
-        self.warningCount = try json.intForKey("warningCount")
-        self.errorChange = try json.intForKey("errorChange")
-        self.improvedPerfTestCount = try json.intForKey("improvedPerfTestCount")
-        self.analyzerWarningChange = try json.intForKey("analyzerWarningChange")
-        self.codeCoveragePercentage = json.optionalIntForKey("codeCoveragePercentage") ?? 0
-        self.codeCoveragePercentageDelta = json.optionalIntForKey("codeCoveragePercentageDelta") ?? 0
+        self.analyzerWarningCount = try json["analyzerWarningCount"].unwrap(as: Int.self)
+        self.testFailureCount = try json["testFailureCount"].unwrap(as: Int.self)
+        self.testsChange = try json["testsChange"].unwrap(as: Int.self)
+        self.errorCount = try json["errorCount"].unwrap(as: Int.self)
+        self.testsCount = try json["testsCount"].unwrap(as: Int.self)
+        self.testFailureChange = try json["testFailureChange"].unwrap(as: Int.self)
+        self.warningChange = try json["warningChange"].unwrap(as: Int.self)
+        self.regressedPerfTestCount = try json["regressedPerfTestCount"].unwrap(as: Int.self)
+        self.warningCount = try json["warningCount"].unwrap(as: Int.self)
+        self.errorChange = try json["errorChange"].unwrap(as: Int.self)
+        self.improvedPerfTestCount = try json["improvedPerfTestCount"].unwrap(as: Int.self)
+        self.analyzerWarningChange = try json["analyzerWarningChange"].unwrap(as: Int.self)
+        self.codeCoveragePercentage = json["codeCoveragePercentage"] as? Int ?? 0
+        self.codeCoveragePercentageDelta = json["codeCoveragePercentageDelta"] as? Int ?? 0
         
         try super.init(json: json)
     }

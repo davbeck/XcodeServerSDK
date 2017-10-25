@@ -43,7 +43,7 @@ public class XcodeServerEndpoints {
         self.serverConfig = serverConfig
     }
     
-    func endpointURL(endpoint: Endpoint, params: [String: String]? = nil) -> String {
+    func endpointURL(for endpoint: Endpoint, params: [String: String]? = nil) -> String {
         
         let base = "/api"
         
@@ -56,7 +56,7 @@ public class XcodeServerEndpoints {
                 let bot = "\(bots)/\(bot)"
                 if
                     let rev = params?["rev"],
-                    let method = params?["method"] where method == "DELETE"
+					let method = params?["method"], method == "DELETE"
                 {
                     let rev = "\(bot)/\(rev)"
                     return rev
@@ -69,7 +69,7 @@ public class XcodeServerEndpoints {
             
             if let _ = params?["bot"] {
                 //gets a list of integrations for this bot
-                let bots = self.endpointURL(.Bots, params: params)
+				let bots = self.endpointURL(for: .Bots, params: params)
                 return "\(bots)/integrations"
             }
             
@@ -83,7 +83,7 @@ public class XcodeServerEndpoints {
             
         case .CancelIntegration:
             
-            let integration = self.endpointURL(.Integrations, params: params)
+			let integration = self.endpointURL(for: .Integrations, params: params)
             let cancel = "\(integration)/cancel"
             return cancel
             
@@ -124,13 +124,13 @@ public class XcodeServerEndpoints {
             
         case .Commits:
             
-            let integration = self.endpointURL(.Integrations, params: params)
+			let integration = self.endpointURL(for: .Integrations, params: params)
             let commits = "\(integration)/commits"
             return commits
             
         case .Issues:
             
-            let integration = self.endpointURL(.Integrations, params: params)
+            let integration = self.endpointURL(for: .Integrations, params: params)
             let issues = "\(integration)/issues"
             return issues
             
@@ -169,7 +169,7 @@ public class XcodeServerEndpoints {
     
     - returns: NSMutableRequest or nil if wrong URL was provided
     */
-    func createRequest(method: HTTP.Method, endpoint: Endpoint, params: [String : String]? = nil, query: [String : String]? = nil, body: NSDictionary? = nil, doBasicAuth auth: Bool = true, portOverride: Int? = nil) -> NSMutableURLRequest? {
+	func createRequest(method: HTTP.Method, endpoint: Endpoint, params: [String : String]? = nil, query: [String : String]? = nil, body: [String:Any]? = nil, doBasicAuth auth: Bool = true, portOverride: Int? = nil) -> URLRequest? {
         var allParams = [
             "method": method.rawValue
         ]
@@ -182,32 +182,32 @@ public class XcodeServerEndpoints {
         }
         
         let port = portOverride ?? self.serverConfig.port
-        let endpointURL = self.endpointURL(endpoint, params: allParams)
+		let endpointURL = self.endpointURL(for: endpoint, params: allParams)
         let queryString = HTTP.stringForQuery(query)
         let wholePath = "\(self.serverConfig.host):\(port)\(endpointURL)\(queryString)"
         
-        guard let url = NSURL(string: wholePath) else {
+        guard let url = URL(string: wholePath) else {
             return nil
         }
         
-        let request = NSMutableURLRequest(URL: url)
+		var request = URLRequest(url: url)
         
-        request.HTTPMethod = method.rawValue
+        request.httpMethod = method.rawValue
         
         if auth {
             //add authorization header
             let user = self.serverConfig.user ?? ""
             let password = self.serverConfig.password ?? ""
-            let plainString = "\(user):\(password)" as NSString
-            let plainData = plainString.dataUsingEncoding(NSUTF8StringEncoding)
-            let base64String = plainData?.base64EncodedStringWithOptions(NSDataBase64EncodingOptions(rawValue: 0))
+            let plainString = "\(user):\(password)"
+            let plainData = plainString.data(using: .utf8)
+            let base64String = plainData?.base64EncodedString()
             request.setValue("Basic \(base64String!)", forHTTPHeaderField: "Authorization")
         }
         
         if let body = body {
             do {
-                let data = try NSJSONSerialization.dataWithJSONObject(body, options: .PrettyPrinted)
-                request.HTTPBody = data
+                let data = try JSONSerialization.data(withJSONObject: body, options: .prettyPrinted)
+                request.httpBody = data
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             } catch {
                 let error = error as NSError

@@ -23,19 +23,19 @@ extension XcodeServer {
     - parameter botOrder:   Bot object which is wished to be created.
     - parameter response:   Response from the XCS.
     */
-    public final func createBot(botOrder: Bot, completion: (response: CreateBotResponse) -> ()) {
+	public final func createBot(botOrder: Bot, completion: @escaping (_ response: CreateBotResponse) -> ()) {
         
         //first validate Blueprint
         let blueprint = botOrder.configuration.sourceControlBlueprint
-        self.verifyGitCredentialsFromBlueprint(blueprint) { (response) -> () in
+		self.verifyGitCredentials(from: blueprint) { (response) -> () in
             
             switch response {
             case .Error(let error):
-                completion(response: XcodeServer.CreateBotResponse.Error(error: error))
+				completion(XcodeServer.CreateBotResponse.Error(error: error))
                 return
             case .SSHFingerprintFailedToVerify(let fingerprint, _):
                 blueprint.certificateFingerprint = fingerprint
-                completion(response: XcodeServer.CreateBotResponse.BlueprintNeedsFixing(fixedBlueprint: blueprint))
+				completion(XcodeServer.CreateBotResponse.BlueprintNeedsFixing(fixedBlueprint: blueprint))
                 return
             case .Success(_, _): break
             }
@@ -43,18 +43,18 @@ extension XcodeServer {
             //blueprint verified, continue creating our new bot
             
             //next, we need to fetch all the available platforms and pull out the one intended for this bot. (TODO: this could probably be sped up by smart caching)
-            self.getPlatforms({ (platforms, error) -> () in
+			self.getPlatforms(completion: { (platforms, error) -> () in
                 
                 if let error = error {
-                    completion(response: XcodeServer.CreateBotResponse.Error(error: error))
+					completion(XcodeServer.CreateBotResponse.Error(error: error))
                     return
                 }
                 
                 do {
                     //we have platforms, find the one in the bot config and replace it
-                    try self.replacePlaceholderPlatformInBot(botOrder, platforms: platforms!)
+					try self.replacePlaceholderPlatform(in: botOrder, platforms: platforms!)
                 } catch {
-                    completion(response: .Error(error: error))
+                    completion(.Error(error: error))
                     return
                 }
                 
@@ -70,23 +70,24 @@ extension XcodeServer {
     - parameter bots:       Optional array of available bots.
     - parameter error:      Optional error.
     */
-    public final func getBots(completion: (bots: [Bot]?, error: NSError?) -> ()) {
+	public final func getBots(completion: @escaping (_ bots: [Bot]?, _ error: Error?) -> ()) {
         
-        self.sendRequestWithMethod(.GET, endpoint: .Bots, params: nil, query: nil, body: nil) { (response, body, error) -> () in
+        self.sendRequest(with: .get, endpoint: .Bots, params: nil, query: nil, body: nil) { (response, body, error) -> () in
             
             if error != nil {
-                completion(bots: nil, error: error)
+                completion(nil, error)
                 return
             }
-            
-            if let body = (body as? NSDictionary)?["results"] as? NSArray {
-                let (result, error): ([Bot]?, NSError?) = unthrow {
-                    return try XcodeServerArray(body)
-                }
-                completion(bots: result, error: error)
-            } else {
-                completion(bots: nil, error: Error.withInfo("Wrong data returned: \(body)"))
-            }
+			
+			do {
+				if let body = (body as? [String:Any])?["results"] as? [[String:Any]] {
+					completion(try XcodeServerArray(body), nil)
+				} else {
+					throw MyError.withInfo("Wrong data returned: \(String(describing: body))")
+				}
+			} catch {
+				completion(nil, error)
+			}
         }
     }
     
@@ -97,27 +98,28 @@ extension XcodeServer {
     - parameter bot:        Optional Bot object.
     - parameter error:      Optional error.
     */
-    public final func getBot(botTinyId: String, completion: (bot: Bot?, error: NSError?) -> ()) {
+	public final func getBot(botTinyId: String, completion: @escaping (_ bot: Bot?, _ error: Error?) -> ()) {
         
         let params = [
             "bot": botTinyId
         ]
         
-        self.sendRequestWithMethod(.GET, endpoint: .Bots, params: params, query: nil, body: nil) { (response, body, error) -> () in
+        self.sendRequest(with: .get, endpoint: .Bots, params: params, query: nil, body: nil) { (response, body, error) -> () in
             
             if error != nil {
-                completion(bot: nil, error: error)
+                completion(nil, error)
                 return
             }
-            
-            if let body = body as? NSDictionary {
-                let (result, error): (Bot?, NSError?) = unthrow {
-                    return try Bot(json: body)
-                }
-                completion(bot: result, error: error)
-            } else {
-                completion(bot: nil, error: Error.withInfo("Wrong body \(body)"))
-            }
+			
+			do {
+				if let body = body as? [String:Any] {
+					completion(try Bot(json: body), nil)
+				} else {
+					throw MyError.withInfo("Wrong body \(String(describing: body))")
+				}
+			} catch {
+				completion(nil, error)
+			}
         }
     }
     
@@ -129,28 +131,28 @@ extension XcodeServer {
     - parameter success:    Operation result indicator.
     - parameter error:      Optional error.
     */
-    public final func deleteBot(botId: String, revision: String, completion: (success: Bool, error: NSError?) -> ()) {
+	public final func deleteBot(botId: String, revision: String, completion: @escaping (_ success: Bool, _ error: Error?) -> ()) {
         
         let params = [
             "rev": revision,
             "bot": botId
         ]
         
-        self.sendRequestWithMethod(.DELETE, endpoint: .Bots, params: params, query: nil, body: nil) { (response, body, error) -> () in
+        self.sendRequest(with: .delete, endpoint: .Bots, params: params, query: nil, body: nil) { (response, body, error) -> () in
             
             if error != nil {
-                completion(success: false, error: error)
+                completion(false, error)
                 return
             }
             
-            if let response = response {
+            if let response = response as? HTTPURLResponse {
                 if response.statusCode == 204 {
-                    completion(success: true, error: nil)
+                    completion(true, nil)
                 } else {
-                    completion(success: false, error: Error.withInfo("Wrong status code: \(response.statusCode)"))
+                    completion(false, MyError.withInfo("Wrong status code: \(response.statusCode)"))
                 }
             } else {
-                completion(success: false, error: Error.withInfo("Nil response"))
+                completion(false, MyError.withInfo("Nil response"))
             }
         }
     }
@@ -167,15 +169,15 @@ extension XcodeServer {
     public enum CreateBotResponse {
         case Success(bot: Bot)
         case BlueprintNeedsFixing(fixedBlueprint: SourceControlBlueprint)
-        case Error(error: ErrorType)
+        case Error(error: Error)
     }
     
-    enum PlaceholderError: ErrorType {
+    enum PlaceholderError: Error {
         case PlatformMissing
         case DeviceFilterMissing
     }
     
-    private func replacePlaceholderPlatformInBot(bot: Bot, platforms: [DevicePlatform]) throws {
+    private func replacePlaceholderPlatform(in bot: Bot, platforms: [DevicePlatform]) throws {
         
         if let filter = bot.configuration.deviceSpecification.filters.first {
             let intendedPlatform = filter.platform
@@ -192,31 +194,28 @@ extension XcodeServer {
         }
     }
     
-    private func createBotNoValidation(botOrder: Bot, completion: (response: CreateBotResponse) -> ()) {
+	private func createBotNoValidation(_ botOrder: Bot, completion: @escaping (_ response: CreateBotResponse) -> ()) {
         
-        let body: NSDictionary = botOrder.dictionarify()
+        let body = botOrder.dictionarify()
         
-        self.sendRequestWithMethod(.POST, endpoint: .Bots, params: nil, query: nil, body: body) { (response, body, error) -> () in
+        self.sendRequest(with: .post, endpoint: .Bots, params: nil, query: nil, body: body) { (response, body, error) -> () in
             
             if let error = error {
-                completion(response: XcodeServer.CreateBotResponse.Error(error: error))
+                completion(XcodeServer.CreateBotResponse.Error(error: error))
                 return
             }
             
-            guard let dictBody = body as? NSDictionary else {
-                let e = Error.withInfo("Wrong body \(body)")
-                completion(response: XcodeServer.CreateBotResponse.Error(error: e))
+            guard let dictBody = body as? [String:Any] else {
+				let e = MyError.withInfo("Wrong body \(String(describing: body))")
+                completion(XcodeServer.CreateBotResponse.Error(error: e))
                 return
             }
-            
-            let (result, error): (Bot?, NSError?) = unthrow {
-                return try Bot(json: dictBody)
-            }
-            if let err = error {
-                completion(response: XcodeServer.CreateBotResponse.Error(error: err))
-            } else {
-                completion(response: XcodeServer.CreateBotResponse.Success(bot: result!))
-            }
+			
+			do {
+				completion(XcodeServer.CreateBotResponse.Success(bot: try Bot(json: dictBody)))
+			} catch {
+				completion(XcodeServer.CreateBotResponse.Error(error: error))
+			}
         }
     }
 

@@ -11,7 +11,7 @@ import XCTest
 import XcodeServerSDK
 import DVR
 
-struct StringError: ErrorType {
+struct MyError: Error {
     
     let description: String
     let _domain: String = ""
@@ -52,22 +52,22 @@ extension XCTestCase {
         return try! NSString(contentsOfFile: (path as NSString).stringByExpandingTildeInPath, encoding: NSUTF8StringEncoding) as String
     }
     
-    func loadJSONResponseFromCassetteWithName(name: String) -> NSDictionary {
+    func loadJSONResponseFromCassetteWithName(name: String) -> [String:Any] {
         
         let dictionary = self.loadJSONWithName(name)
         
-        let interactions = dictionary["interactions"] as! [NSDictionary]
-        let response = interactions.first!["response"] as! NSDictionary
+        let interactions = dictionary["interactions"] as! [[String:Any]]
+        let response = interactions.first!["response"] as! [String:Any]
         
         //make sure it's json
         assert(response["body_format"] as! String == "json")
         
         //get the response data out
-        let body = response["body"] as! NSDictionary
+        let body = response["body"] as! [String:Any]
         return body
     }
     
-    func loadJSONWithName(name: String) -> NSDictionary {
+    func loadJSONWithName(name: String) -> [String:Any] {
         
         let bundle = NSBundle(forClass: BotParsingTests.classForCoder())
         do {
@@ -75,18 +75,18 @@ extension XCTestCase {
             if let url = bundle.URLForResource(name, withExtension: "json") {
                 
                 let data = try NSData(contentsOfURL: url, options: NSDataReadingOptions())                
-                if let json = try NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions()) as? NSDictionary {
+                if let json = try JSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions()) as? [String:Any] {
                     return json
                 }
                 
             } else {
-                throw StringError("File with name \(name) not found in the bundle")
+                throw MyError.withInfo("File with name \(name) not found in the bundle")
             }
             
         } catch {
             XCTFail("Error reading file with name \(name), error: \(error)")
         }
-        return NSDictionary()
+        return [String:Any]()
     }
     
     func botInCassetteWithName(name: String) throws -> Bot {
@@ -131,20 +131,20 @@ extension XCTestCase {
     /**
     Replacement method for XCTAssertThrowsSpecificError which isn't currently supported.
     
-    - parameter kind:    ErrorType which is expected to be thrown from block
+    - parameter kind:    Error which is expected to be thrown from block
     - parameter message: Message which should be displayed
     - parameter file:    File in which assertion happened
     - parameter line:    Line in which assertion happened
     - parameter block:   Block of code against which assertion should be matched
     */
-    func XCTempAssertThrowsSpecificError(kind: ErrorType, _ message: String = "", file: StaticString = #file, line: UInt = #line, _ block: () throws -> ()) {
+    func XCTempAssertThrowsSpecificError(kind: Error, _ message: String = "", file: StaticString = #file, line: UInt = #line, _ block: () throws -> ()) {
         do {
             try block()
             
             let msg = (message == "") ? "Tested block did not throw expected \(kind) error." : message
             XCTFail(msg, file: file, line: line)
-        } catch let error as NSError {
-            let expected = kind as NSError
+        } catch let error as Error {
+            let expected = kind as Error
             if ((error.domain != expected.domain) || (error.code != expected.code)) {
                 let msg = (message == "") ? "Tested block threw \(error), not expected \(kind) error." : message
                 XCTFail(msg, file: file, line: line)
@@ -172,17 +172,17 @@ extension XCTestCase {
     /**
     Replacement method for XCTAssertNoThrowsSpecificError which isn't currently supported.
     
-    - parameter kind:    ErrorType which isn't expected to be thrown from block
+    - parameter kind:    Error which isn't expected to be thrown from block
     - parameter message: Message which should be displayed
     - parameter file:    File in which assertion happened
     - parameter line:    Line in which assertion happened
     - parameter block:   Block of code against which assertion should be matched
     */
-    func XCTempAssertNoThrowSpecificError(kind: ErrorType, _ message: String = "", file: StaticString = #file, line: UInt = #line, _ block: () throws -> ()) {
+    func XCTempAssertNoThrowSpecificError(kind: Error, _ message: String = "", file: StaticString = #file, line: UInt = #line, _ block: () throws -> ()) {
         do {
             try block()
-        } catch let error as NSError {
-            let unwanted = kind as NSError
+        } catch let error as Error {
+            let unwanted = kind as Error
             if ((error.domain == unwanted.domain) && (error.code == unwanted.code)) {
                 let msg = (message == "") ? "Tested block threw unexpected \(kind) error." : message  
                 XCTFail(msg, file: file, line: line)  

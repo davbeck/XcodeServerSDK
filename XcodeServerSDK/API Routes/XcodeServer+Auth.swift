@@ -20,24 +20,24 @@ extension XcodeServer {
     - parameter success:    Indicates whether sign in was successful.
     - parameter error:      Error indicating failure of sign in.
     */
-    public final func login(completion: (success: Bool, error: NSError?) -> ()) {
+	public final func login(completion: @escaping (_ success: Bool, _ error: Error?) -> ()) {
         
-        self.sendRequestWithMethod(.POST, endpoint: .Login, params: nil, query: nil, body: nil) { (response, body, error) -> () in
+        self.sendRequest(with: .post, endpoint: .Login, params: nil, query: nil, body: nil) { (response, body, error) -> () in
             
             if error != nil {
-                completion(success: false, error: error)
+                completion(false, error)
                 return
             }
             
-            if let response = response {
+            if let response = response as? HTTPURLResponse {
                 if response.statusCode == 204 {
-                    completion(success: true, error: nil)
+                    completion(true, nil)
                 } else {
-                    completion(success: false, error: Error.withInfo("Wrong status code: \(response.statusCode)"))
+                    completion(false, MyError.withInfo("Wrong status code: \(response.statusCode)"))
                 }
                 return
             }
-            completion(success: false, error: Error.withInfo("Nil response"))
+            completion(false, MyError.withInfo("Nil response"))
         }
     }
     
@@ -47,24 +47,24 @@ extension XcodeServer {
     - parameter success:    Indicates whether sign out was successful.
     - parameter error:      Error indicating failure of sign out.
     */
-    public final func logout(completion: (success: Bool, error: NSError?) -> ()) {
+	public final func logout(completion: @escaping (_ success: Bool, _ error: Error?) -> ()) {
         
-        self.sendRequestWithMethod(.POST, endpoint: .Logout, params: nil, query: nil, body: nil) { (response, body, error) -> () in
+        self.sendRequest(with: .post, endpoint: .Logout, params: nil, query: nil, body: nil) { (response, body, error) -> () in
             
             if error != nil {
-                completion(success: false, error: error)
+                completion(false, error)
                 return
             }
             
-            if let response = response {
+            if let response = response as? HTTPURLResponse {
                 if response.statusCode == 204 {
-                    completion(success: true, error: nil)
+                    completion(true, nil)
                 } else {
-                    completion(success: false, error: Error.withInfo("Wrong status code: \(response.statusCode)"))
+                    completion(false, MyError.withInfo("Wrong status code: \(response.statusCode)"))
                 }
                 return
             }
-            completion(success: false, error: Error.withInfo("Nil response"))
+            completion(false, MyError.withInfo("Nil response"))
         }
     }
     
@@ -76,23 +76,23 @@ extension XcodeServer {
     - parameter canCreateBots:  Indicator of bot creation accessibility.
     - parameter error:          Optional error.
     */
-    public final func getUserCanCreateBots(completion: (canCreateBots: Bool, error: NSError?) -> ()) {
+	public final func getUserCanCreateBots(completion: @escaping (_ canCreateBots: Bool, _ error: Error?) -> ()) {
         
-        self.sendRequestWithMethod(.GET, endpoint: .UserCanCreateBots, params: nil, query: nil, body: nil) { (response, body, error) -> () in
+        self.sendRequest(with: .get, endpoint: .UserCanCreateBots, params: nil, query: nil, body: nil) { (response, body, error) -> () in
             
             if let error = error {
-                completion(canCreateBots: false, error: error)
+                completion(false, error)
                 return
             }
             
-            if let body = body as? NSDictionary {
-                if let canCreateBots = body["result"] as? Bool where canCreateBots == true {
-                    completion(canCreateBots: true, error: nil)
+            if let body = body as? [String:Any] {
+                if let canCreateBots = body["result"] as? Bool, canCreateBots == true {
+                    completion(true, nil)
                 } else {
-                    completion(canCreateBots: false, error: Error.withInfo("Specified user cannot create bots"))
+                    completion(false, MyError.withInfo("Specified user cannot create bots"))
                 }
             } else {
-                completion(canCreateBots: false, error: Error.withInfo("Wrong body \(body)"))
+				completion(false, MyError.withInfo("Wrong body \(String(describing: body))"))
             }
         }
     }
@@ -105,7 +105,7 @@ extension XcodeServer {
     - parameter success:    Indicates if user can create bots.
     - parameter error:      Error if something went wrong.
     */
-    public final func verifyXCSUserCanCreateBots(completion: (success: Bool, error: NSError?) -> ()) {
+	public final func verifyXCSUserCanCreateBots(completion: @escaping (_ success: Bool, _ error: Error?) -> ()) {
         
         //the way we check availability is first by logging out (does nothing if not logged in) and then
         //calling getUserCanCreateBots, which, if necessary, automatically authenticates with Basic auth before resolving to true or false in JSON.
@@ -113,18 +113,18 @@ extension XcodeServer {
         self.logout { (success, error) -> () in
             
             if let error = error {
-                completion(success: false, error: error)
+                completion(false, error)
                 return
             }
             
             self.getUserCanCreateBots { (canCreateBots, error) -> () in
                 
                 if let error = error {
-                    completion(success: false, error: error)
+                    completion(false, error)
                     return
                 }
                 
-                completion(success: canCreateBots, error: nil)
+                completion(canCreateBots, nil)
             }
         }
     }

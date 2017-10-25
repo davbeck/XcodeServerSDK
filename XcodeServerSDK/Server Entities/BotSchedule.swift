@@ -52,18 +52,18 @@ public class BotSchedule : XcodeServerEntity {
     public let hours: Int!
     public let minutes: Int!
     
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
         
-        let schedule = Schedule(rawValue: try json.intForKey("scheduleType"))!
+        let schedule = Schedule(rawValue: try json["scheduleType"].unwrap(as: Int.self))!
         self.schedule = schedule
         
         if schedule == .Periodical {
             
-            let period = Period(rawValue: try json.intForKey("periodicScheduleInterval"))!
+            let period = Period(rawValue: try json["periodicScheduleInterval"].unwrap(as: Int.self))!
             self.period = period
             
-            let minutes = json.optionalIntForKey("minutesAfterHourToIntegrate")
-            let hours = json.optionalIntForKey("hourOfIntegration")
+            let minutes = json["minutesAfterHourToIntegrate"] as? Int
+            let hours = json["hourOfIntegration"] as? Int
             
             switch period {
             case .Hourly:
@@ -77,7 +77,7 @@ public class BotSchedule : XcodeServerEntity {
             case .Weekly:
                 self.minutes = minutes!
                 self.hours = hours!
-                self.day = Day(rawValue: try json.intForKey("weeklyScheduleDay"))
+                self.day = Day(rawValue: try json["weeklyScheduleDay"].unwrap(as: Int.self))
             }
         } else {
             self.period = nil
@@ -108,10 +108,9 @@ public class BotSchedule : XcodeServerEntity {
         return BotSchedule(schedule: .Commit, period: nil, day: nil, hours: nil, minutes: nil)
     }
     
-    public override func dictionarify() -> NSDictionary {
-        
-        let dictionary = NSMutableDictionary()
-        
+    public override func dictionarify() -> [String:Any] {
+		var dictionary = [String:Any]()
+
         dictionary["scheduleType"] = self.schedule.rawValue
         dictionary["periodicScheduleInterval"] = self.period?.rawValue ?? 0
         dictionary["weeklyScheduleDay"] = self.day?.rawValue ?? 0

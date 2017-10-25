@@ -27,8 +27,8 @@ class IntegrationTests: XCTestCase {
     
     // MARK: Commits
     
-    var expectedDate: NSDate = {
-        let formatter = NSDateFormatter()
+    var expectedDate: Date = {
+        let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZ"
         
         return formatter.dateFromString("2015-07-24T09:40:58.462Z")!

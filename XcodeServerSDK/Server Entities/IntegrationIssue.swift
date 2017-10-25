@@ -28,7 +28,7 @@ public class IntegrationIssue: XcodeServerEntity {
     }
     
     /// Payload is holding whole Dictionary of the Issue
-    public let payload: NSDictionary
+    public let payload: [String:Any]
     
     public let message: String?
     public let type: IssueType
@@ -39,16 +39,16 @@ public class IntegrationIssue: XcodeServerEntity {
     public let status: IssueStatus
     
     // MARK: Initialization
-    public required init(json: NSDictionary) throws {
-        self.payload = json.copy() as? NSDictionary ?? NSDictionary()
+    public required init(json: [String:Any]) throws {
+        self.payload = json
         
-        self.message = json.optionalStringForKey("message")
-        self.type = try IssueType(rawValue: json.stringForKey("type"))!
-        self.issueType = try json.stringForKey("issueType")
-        self.commits = try json.arrayForKey("commits").map { try Commit(json: $0) }
-        self.integrationID = try json.stringForKey("integrationID")
-        self.age = try json.intForKey("age")
-        self.status = IssueStatus(rawValue: try json.intForKey("status"))!
+        self.message = json["message"] as? String
+        self.type = try IssueType(rawValue: json["type"].unwrap(as: String.self))!
+        self.issueType = try json["issueType"].unwrap(as: String.self)
+        self.commits = try (json["commits"] as? [[String : Any]]).unwrap().map { try Commit(json: $0) }
+        self.integrationID = try json["integrationID"].unwrap(as: String.self)
+        self.age = try json["age"].unwrap(as: Int.self)
+        self.status = try IssueStatus(rawValue: json["status"].unwrap(as: Int.self)).unwrap()
         
         try super.init(json: json)
     }

@@ -21,39 +21,35 @@ public class IntegrationIssues: XcodeServerEntity {
     
     // MARK: Initialization
     
-    public required init(json: NSDictionary) throws {
-        self.buildServiceErrors = try json.arrayForKey("buildServiceErrors").map { try IntegrationIssue(json: $0) }
-        self.buildServiceWarnings = try json.arrayForKey("buildServiceWarnings").map { try IntegrationIssue(json: $0) }
-        self.triggerErrors = try json.arrayForKey("triggerErrors").map { try IntegrationIssue(json: $0) }
+    public required init(json: [String:Any]) throws {
+		self.buildServiceErrors = try json["buildServiceErrors"].unwrap(as: [[String:Any]].self).map { try IntegrationIssue(json: $0) }
+        self.buildServiceWarnings = try json["buildServiceWarnings"].unwrap(as: [[String : Any]].self).map { try IntegrationIssue(json: $0) }
+        self.triggerErrors = try json["triggerErrors"].unwrap(as: [[String : Any]].self).map { try IntegrationIssue(json: $0) }
         
         // Nested issues
-        self.errors = try json
-            .dictionaryForKey("errors")
-            .allValues
+		self.errors = try json["errors"].unwrap(as: [String:[[String:Any]]].self)
+            .values
             .filter { $0.count != 0 }
             .flatMap {
-                try ($0 as! NSArray).map { try IntegrationIssue(json: $0 as! NSDictionary) }
+				try $0.map { try IntegrationIssue(json: $0) }
         }
-        self.warnings = try json
-            .dictionaryForKey("warnings")
-            .allValues
+        self.warnings = try json["warnings"].unwrap(as: [String:[[String:Any]]].self)
+            .values
             .filter { $0.count != 0 }
             .flatMap {
-                try ($0 as! NSArray).map { try IntegrationIssue(json: $0 as! NSDictionary) }
+				try $0.map { try IntegrationIssue(json: $0) }
         }
-        self.testFailures = try json
-            .dictionaryForKey("testFailures")
-            .allValues
+        self.testFailures = try json["testFailures"].unwrap(as: [String:[[String:Any]]].self)
+            .values
             .filter { $0.count != 0 }
             .flatMap {
-                try ($0 as! NSArray).map { try IntegrationIssue(json: $0 as! NSDictionary) }
+				try $0.map { try IntegrationIssue(json: $0) }
         }
-        self.analyzerWarnings = try json
-            .dictionaryForKey("analyzerWarnings")
-            .allValues
+        self.analyzerWarnings = try json["analyzerWarnings"].unwrap(as: [String:[[String:Any]]].self)
+            .values
             .filter { $0.count != 0 }
             .flatMap {
-                try ($0 as! NSArray).map { try IntegrationIssue(json: $0 as! NSDictionary) }
+				try $0.map { try IntegrationIssue(json: $0) }
         }
         
         try super.init(json: json)

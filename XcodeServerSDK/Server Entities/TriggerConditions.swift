@@ -31,9 +31,8 @@ public class TriggerConditions : XcodeServerEntity {
         super.init()
     }
     
-    public override func dictionarify() -> NSDictionary {
-        
-        let dict = NSMutableDictionary()
+    public override func dictionarify() -> [String:Any] {
+        var dict = [String:Any]()
         
         dict["status"] = self.status
         dict["onAnalyzerWarnings"] = self.onAnalyzerWarnings
@@ -46,18 +45,18 @@ public class TriggerConditions : XcodeServerEntity {
         return dict
     }
     
-    public required init(json: NSDictionary) throws {
+    public required init(json: [String:Any]) throws {
         
-        self.status = json.optionalIntForKey("status") ?? 2
-        self.onAnalyzerWarnings = try json.boolForKey("onAnalyzerWarnings")
-        self.onBuildErrors = try json.boolForKey("onBuildErrors")
-        self.onFailingTests = try json.boolForKey("onFailingTests")
+        self.status = json["status"] as? Int ?? 2
+        self.onAnalyzerWarnings = try json["onAnalyzerWarnings"].unwrap(as: Bool.self)
+        self.onBuildErrors = try json["onBuildErrors"].unwrap(as: Bool.self)
+        self.onFailingTests = try json["onFailingTests"].unwrap(as: Bool.self)
         
         //not present in Xcode 8 anymore, make it optional & default to false
-        let internalErrors = try? json.boolForKey("onInternalErrors")
+        let internalErrors = json["onInternalErrors"] as? Bool
         self.onInternalErrors = internalErrors ?? false
-        self.onSuccess = try json.boolForKey("onSuccess")
-        self.onWarnings = try json.boolForKey("onWarnings")
+        self.onSuccess = try json["onSuccess"].unwrap(as: Bool.self)
+        self.onWarnings = try json["onWarnings"].unwrap(as: Bool.self)
         
         try super.init(json: json)
     }
